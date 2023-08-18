@@ -103,15 +103,24 @@ int main (int argc, char **argv)
 		perror("bind");
 		return 1;
 	}
-	sendto(fd, msg, total_len + padding, 0, (struct sockaddr *)&addr, sizeof addr);
+	if (sendto(fd, msg, total_len + padding, 0, (struct sockaddr *)&addr, sizeof addr) != total_len + padding) {
+		perror("sendto");
+		return 1;
+	}
 
 	socklen_t addrlen = sizeof addr;
 
 	unsigned response_counter = 0;
 	struct pollfd response_poll = {.fd = fd, .events = POLLIN};
 	while (poll(&response_poll, 1, response_counter ? 500 : 2000) > 0) {
+		if (response_poll.revents & POLLERR)
+			break;
+
 		response_counter++;
-		recvfrom(fd, msg, sizeof msg, 0, (struct sockaddr *)&addr, &addrlen);
+		if (recvfrom(fd, msg, sizeof msg, 0, (struct sockaddr *)&addr, &addrlen) < 0) {
+			perror("recvfrom");
+			continue;
+		}
 
 		const unsigned char *pmsg = msg;
 
