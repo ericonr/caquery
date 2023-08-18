@@ -103,6 +103,10 @@ int main (int argc, char **argv)
 		perror("bind");
 		return 1;
 	}
+	int enable_broadcast = 1;
+	if (setsockopt(fd, SOL_SOCKET, SO_BROADCAST, &enable_broadcast, sizeof enable_broadcast))
+		perror("setsockopt(SO_BROADCAST)");
+
 	if (sendto(fd, msg, total_len + padding, 0, (struct sockaddr *)&addr, sizeof addr) != total_len + padding) {
 		perror("sendto");
 		return 1;
