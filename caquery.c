@@ -4,6 +4,7 @@
 #include <netinet/ip.h>
 #include <sys/socket.h>
 
+#include <poll.h>
 #include <stdint.h>
 #include <stdio.h>
 #include <string.h>
@@ -88,9 +89,15 @@ int main (int argc, char **argv)
 	}
 	sendto(fd, msg, total_len + padding, 0, (struct sockaddr *)&addr, sizeof addr);
 
-	/* TODO: implement loop to detect duplicated responses, if any */
 	socklen_t addrlen = sizeof addr;
-	recvfrom(fd, msg, sizeof msg, 0, (struct sockaddr *)&addr, &addrlen);
 
-	/* TODO: implement reading response */
+	unsigned response_counter = 0;
+	struct pollfd response_poll = {.fd = fd, .events = POLLIN};
+	while (poll(&response_poll, 1, 500) > 0) {
+		response_counter++;
+		/* TODO: implement reading response */
+		recvfrom(fd, msg, sizeof msg, 0, (struct sockaddr *)&addr, &addrlen);
+	}
+
+	fprintf(stderr, "number of responses: %u\n", response_counter);
 }
