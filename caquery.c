@@ -9,6 +9,12 @@
 #include <stdio.h>
 #include <string.h>
 
+#define CA_PROTO_VERSION 0x0
+#define CA_PROTO_SEARCH 0x6
+
+#define DESIRED_PRIORITY 1
+#define CA_VERSION 13
+
 int main (int argc, char **argv)
 {
 	if (argc < 3) return 1;
@@ -37,18 +43,17 @@ int main (int argc, char **argv)
 	uint32_t sid = 123456789;
 
 	unsigned char msg[512];
-	/* command; CA_PROTO_VERSION 0x0 */
 	msg[0] = 0;
-	msg[1] = 0;
+	msg[1] = CA_PROTO_VERSION;
 	/* payload size */
 	msg[2] = 0;
 	msg[3] = 0;
 	/* priority */
 	msg[4] = 0;
-	msg[5] = 1;
+	msg[5] = DESIRED_PRIORITY;
 	/* version 4.13 */
 	msg[6] = 0;
-	msg[7] = 13;
+	msg[7] = CA_VERSION;
 	/* parameter 1; CA_PROTO_VERSION 0 */
 	msg[8] = msg[9] = msg[10] = msg[11] = 0;
 	/* parameter 2; CA_PROTO_VERSION 0 */
@@ -56,9 +61,8 @@ int main (int argc, char **argv)
 	/* XXX: why does caget do this? */
 	//msg[11] = 1;
 
-	/* command; CA_PROTO_SEARCH 0x6 */
 	msg[16] = 0;
-	msg[17] = 6;
+	msg[17] = CA_PROTO_SEARCH;
 	/* payload size */
 	msg[18] = (pv_name_len + padding) >> 8;
 	msg[19] = (pv_name_len + padding) & 0xff;
