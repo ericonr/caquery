@@ -15,6 +15,18 @@
 #define DESIRED_PRIORITY 1
 #define CA_VERSION 13
 
+static inline uint16_t get_net_u16(const unsigned char *p)
+{
+	uint16_t b0 = p[0], b1 = p[1];
+	return b0 << 8 | b1;
+}
+
+static inline uint32_t get_net_u32(const unsigned char *p)
+{
+	uint32_t b0 = p[0], b1 = p[1], b2 = p[2], b3 = p[3];
+	return b0 << 24 | b1 << 16 | b2 << 8 | b3;
+}
+
 int main (int argc, char **argv)
 {
 	if (argc < 3) return 1;
@@ -99,8 +111,51 @@ int main (int argc, char **argv)
 	struct pollfd response_poll = {.fd = fd, .events = POLLIN};
 	while (poll(&response_poll, 1, 500) > 0) {
 		response_counter++;
-		/* TODO: implement reading response */
 		recvfrom(fd, msg, sizeof msg, 0, (struct sockaddr *)&addr, &addrlen);
+
+		const unsigned char *pmsg = msg;
+
+		if (get_net_u16(pmsg) != CA_PROTO_VERSION) {
+			fputs("version: bad command\n", stderr);
+			continue;
+		} else if (get_net_u16(pmsg+4) != DESIRED_PRIORITY) {
+			/* XXX: spec says this should be 0 */
+			fputs("version: bad priority\n", stderr);
+			continue;
+		} else if (get_net_u16(pmsg+6) != CA_VERSION) {
+			fputs("version: unexpected version\n", stderr);
+			continue;
+		}
+
+		pmsg += 16;
+		if (get_net_u16(pmsg) != CA_PROTO_SEARCH) {
+			fputs("search: bad command\n", stderr);
+			continue;
+		} else if (get_net_u16(pmsg+2) != 8) {
+			fputs("search: bad payload size\n", stderr);
+			continue;
+		} else if (get_net_u16(pmsg+6) != 0) {
+			fputs("search: bad data count\n", stderr);
+			continue;
+		} else if (get_net_u32(pmsg+12) != sid) {
+			fputs("search: bad SearchID\n", stderr);
+			continue;
+		}
+
+		char server_ip[INET_ADDRSTRLEN];
+		if (get_net_u32(pmsg+8) == 0xffffffff) {
+			inet_ntop(AF_INET, &addr.sin_addr, server_ip, sizeof server_ip);
+		} else {
+			struct in_addr tmp_addr;
+			memcpy(&tmp_addr.s_addr, pmsg+8, sizeof tmp_addr.s_addr);
+			inet_ntop(AF_INET, &tmp_addr, server_ip, sizeof server_ip);
+		}
+
+		uint16_t server_port = get_net_u16(pmsg+4);
+		/* payload */
+		uint16_t server_proto_version = get_net_u16(pmsg+16);
+
+		printf("server: %s port: %u version: 4.%u\n", server_ip, server_port, server_proto_version);
 	}
 
 	fprintf(stderr, "number of responses: %u\n", response_counter);
