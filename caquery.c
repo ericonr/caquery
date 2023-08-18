@@ -109,7 +109,7 @@ int main (int argc, char **argv)
 
 	unsigned response_counter = 0;
 	struct pollfd response_poll = {.fd = fd, .events = POLLIN};
-	while (poll(&response_poll, 1, 500) > 0) {
+	while (poll(&response_poll, 1, response_counter ? 500 : 2000) > 0) {
 		response_counter++;
 		recvfrom(fd, msg, sizeof msg, 0, (struct sockaddr *)&addr, &addrlen);
 
